@@ -21,18 +21,20 @@ const questions = [
   {
     type: 'input',
     name: 'date',
-    message: 'Enter the post date (YYYY-MM-DD):',
+    message: `Enter the post date (YYYY-MM-DD): ${chalk.gray('(default: today)')}`,
     default: new Date().toISOString().split('T')[0],
     validate: (input) =>
       /\d{4}-\d{2}-\d{2}/.test(input) ? true : 'Date must be in YYYY-MM-DD format',
+    filter: (input) => (input.trim() === '' ? new Date().toISOString().split('T')[0] : input),
   },
   {
     type: 'input',
     name: 'lastmod',
-    message: 'Enter the last modified date (YYYY-MM-DD):',
+    message: `Enter the last modified date (YYYY-MM-DD): ${chalk.gray('(default: today)')}`,
     default: new Date().toISOString().split('T')[0],
     validate: (input) =>
       /\d{4}-\d{2}-\d{2}/.test(input) ? true : 'Date must be in YYYY-MM-DD format',
+    filter: (input) => (input.trim() === '' ? new Date().toISOString().split('T')[0] : input),
   },
   {
     type: 'input',
@@ -58,8 +60,9 @@ const questions = [
   {
     type: 'input',
     name: 'authors',
-    message: 'Enter authors (comma-separated):',
+    message: `Enter authors (comma-separated): ${chalk.gray('(default: default)')}`,
     default: 'default',
+    filter: (input) => (input.trim() === '' ? 'default' : input),
   },
   {
     type: 'list',
