@@ -1,0 +1,527 @@
+---
+title: 'seamless token refresh'
+date: '2024-05-20'
+lastmod: '2024-05-20'
+draft: false
+layout: PostSimple
+tags: ['nextjs', 'accessToken', 'refreshToken']
+summary: '这是一个使用 Next.js 14 构建的示例应用程序，展示了如何实现无感刷新Token，并结合Server Actions和`useTransition`来处理表单提交。'
+authors: ['default']
+---
+
+### 目录结构
+
+```plaintext
+my-nextjs-app/
+├── .env.local
+├── .gitignore
+├── next.config.js
+├── package.json
+├── public/
+├── styles/
+├── app/
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login/
+│   │   │   │   └── route.ts
+│   │   │   ├── logout/
+│   │   │   │   └── route.ts
+│   │   │   └── refresh/
+│   │   │       └── route.ts
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── layout.tsx
+│   ├── login/
+│   │   └── page.tsx
+│   ├── profile/
+│   │   └── page.tsx
+│   └── page.tsx
+├── middleware.ts
+└── utils/
+    ├── apiClient.ts
+    └── db.ts
+```
+
+### `.env.local`
+
+```plaintext
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+```
+
+### `utils/apiClient.ts`
+
+```typescript
+const apiClient = async (url: string, options: RequestInit = {}) => {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('API request failed')
+  }
+
+  const contentType = response.headers.get('content-type')
+
+  if (contentType && contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  if (contentType && contentType.includes('text/plain')) {
+    return response.text()
+  }
+
+  // 如果需要处理其他类型，可以在这里添加逻辑
+  return response
+}
+
+export default apiClient
+```
+
+### `utils/db.ts`
+
+```typescript
+import bcrypt from 'bcrypt'
+
+interface User {
+  id: string
+  email: string
+  passwordHash: string
+}
+
+const users: User[] = [
+  {
+    id: '1',
+    email: 'user@example.com',
+    passwordHash: bcrypt.hashSync('password123', 10), // 示例密码
+  },
+]
+
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const user = users.find((user) => user.email === email)
+  return user || null
+}
+
+export async function verifyPassword(user: User, password: string): Promise<boolean> {
+  return bcrypt.compare(password, user.passwordHash)
+}
+```
+
+### `app/api/auth/login/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import jwt from 'jsonwebtoken'
+import { findUserByEmail, verifyPassword } from '@/utils/db'
+
+export async function POST(req: NextRequest) {
+  const { email, password } = await req.json()
+
+  // 查找用户
+  const user = await findUserByEmail(email)
+  if (!user) {
+    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+  }
+
+  // 验证密码
+  const isPasswordValid = await verifyPassword(user, password)
+  if (!isPasswordValid) {
+    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+  }
+
+  // 生成Token
+  const accessToken = jwt.sign({ userId: user.id }, process.env.ACCESS_TOKEN_SECRET!, {
+    expiresIn: '15m',
+  })
+  const refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_TOKEN_SECRET!, {
+    expiresIn: '7d',
+  })
+
+  const response = NextResponse.json({ accessToken, refreshToken })
+
+  response.cookies.set('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  })
+
+  response.cookies.set('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  })
+
+  return response
+}
+```
+
+### `app/api/auth/logout/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(req: NextRequest) {
+  const response = NextResponse.json({ message: 'Logged out successfully' })
+
+  response.cookies.set('accessToken', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: -1,
+  })
+
+  response.cookies.set('refreshToken', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: -1,
+  })
+
+  return response
+}
+```
+
+### `app/api/auth/refresh/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import jwt from 'jsonwebtoken'
+
+export async function POST(req: NextRequest) {
+  const { refreshToken } = await req.json()
+
+  try {
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!) as jwt.JwtPayload
+    const newAccessToken = jwt.sign({ userId: payload.userId }, process.env.ACCESS_TOKEN_SECRET!, {
+      expiresIn: '15m',
+    })
+    const newRefreshToken = jwt.sign(
+      { userId: payload.userId },
+      process.env.REFRESH_TOKEN_SECRET!,
+      { expiresIn: '7d' }
+    )
+
+    return NextResponse.json({ accessToken: newAccessToken, refreshToken: newRefreshToken })
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 })
+  }
+}
+```
+
+### `middleware.ts`
+
+```typescript
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import jwt from 'jsonwebtoken'
+
+export async function middleware(req: NextRequest) {
+  const accessToken = req.cookies.get('accessToken')?.value
+  const refreshToken = req.cookies.get('refreshToken')?.value
+
+  const url = req.nextUrl.clone()
+
+  // 验证需要身份验证的页面
+  if (
+    req.nextUrl.pathname.startsWith('/dashboard') ||
+    req.nextUrl.pathname.startsWith('/profile')
+  ) {
+    if (!accessToken) {
+      if (refreshToken) {
+        try {
+          const payload = jwt.verify(
+            refreshToken,
+            process.env.REFRESH_TOKEN_SECRET!
+          ) as jwt.JwtPayload
+          const newAccessToken = jwt.sign(
+            { userId: payload.userId },
+            process.env.ACCESS_TOKEN_SECRET!,
+            { expiresIn: '15m' }
+          )
+          const newRefreshToken = jwt.sign(
+            { userId: payload.userId },
+            process.env.REFRESH_TOKEN_SECRET!,
+            { expiresIn: '7d' }
+          )
+
+          const response = NextResponse.next()
+          response.cookies.set('accessToken', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          })
+
+          response.cookies.set('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          })
+
+          return response
+        } catch (error) {
+          return NextResponse.redirect(new URL('/login', req.url))
+        }
+      } else {
+        return NextResponse.redirect(new URL('/login', req.url))
+      }
+    }
+
+    try {
+      jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET!)
+    } catch (err) {
+      if (refreshToken) {
+        try {
+          const payload = jwt.verify(
+            refreshToken,
+            process.env.REFRESH_TOKEN_SECRET!
+          ) as jwt.JwtPayload
+          const newAccessToken = jwt.sign(
+            { userId: payload.userId },
+            process.env.ACCESS_TOKEN_SECRET!,
+            { expiresIn: '15m' }
+          )
+          const newRefreshToken = jwt.sign(
+            { userId: payload.userId },
+            process.env.REFRESH_TOKEN_SECRET!,
+            { expiresIn: '7d' }
+          )
+
+          const response = NextResponse.next()
+          response.cookies.set('accessToken', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          })
+
+          response.cookies.set('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+          })
+
+          return response
+        } catch (error) {
+          return NextResponse.redirect(new URL('/login', req.url))
+        }
+      } else {
+        return NextResponse.redirect(new URL('/login', req.url))
+      }
+    }
+  }
+
+  // 处理登录页面
+  if (req.nextUrl.pathname.startsWith('/login')) {
+    if (accessToken) {
+      try {
+        jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET!)
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      } catch (err) {
+        // Token is invalid, continue to login page
+      }
+    }
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/profile/:path*', '/login'],
+}
+```
+
+### `app/dashboard/page.tsx`
+
+```typescript
+export default function Dashboard() {
+  return (
+    <div>
+      <h1>Welcome to the Dashboard</h1>
+      <form action="/api/auth/logout" method="post">
+        <button type="submit">Logout</button>
+      </form>
+    </div>
+  );
+}
+```
+
+### `app/login/page.tsx`
+
+```typescript
+export default function Login() {
+  return (
+    <form action="/api/auth/login" method="post">
+      <div>
+        <label>Email:</label>
+        <input type="email" name="email" required />
+      </div>
+      <div>
+        <label>Password:</label>
+        <input type="password" name="password" required />
+      </div>
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+### `app/layout.tsx`
+
+```typescript
+import '@/styles/globals.css';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+### `app/page.tsx`
+
+```typescript
+import Link from 'next/link';
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Welcome to the Home Page</h1>
+      <Link href="/login">Login</Link>
+      <Link href="/dashboard">Dashboard</Link>
+    </div>
+  );
+}
+```
+
+### README.md
+
+````markdown
+# My Next.js App
+
+这是一个使用 Next.js 14 构建的示例应用程序，展示了如何实现无感刷新Token，并结合中间件来处理身份验证逻辑。
+
+## 目录结构
+
+```plaintext
+my-nextjs-app/
+├── .env.local
+├── .gitignore
+├── next.config.js
+├── package.json
+├── public/
+├── styles/
+├── app/
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login/
+│   │   │   │   └── route.ts
+│   │   │   ├── logout/
+│   │   │   │   └── route.ts
+│   │   │   └── refresh/
+│   │   │       └── route.ts
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── layout.tsx
+│   ├── login/
+│   │   └── page.tsx
+│   ├── profile/
+│   │   └── page.tsx
+│   └── page.tsx
+├── middleware.ts
+└── utils/
+    ├── apiClient.ts
+    └── db.ts
+```
+````
+
+## 环境变量
+
+在项目根目录下创建一个 `.env.local` 文件，添加以下内容：
+
+```plaintext
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+```
+
+确保用你自己的密钥替换 `your_access_token_secret` 和 `your_refresh_token_secret`。
+
+## 安装依赖
+
+运行以下命令安装项目依赖：
+
+```bash
+npm install
+```
+
+## 启动开发服务器
+
+运行以下命令启动开发服务器：
+
+```bash
+npm run dev
+```
+
+服务器启动后，打开浏览器并访问 `http://localhost:3000`。
+
+## 主要文件说明
+
+### `middleware.ts`
+
+这个文件包含中间件逻辑，用于处理Token的无感刷新和页面重定向。
+
+### `app/api/auth/login/route.ts`
+
+这个文件处理登录请求，验证用户并生成访问Token和刷新Token。
+
+### `app/api/auth/logout/route.ts`
+
+这个文件处理用户注销请求，清除访问Token和刷新Token。
+
+### `app/api/auth/refresh/route.ts`
+
+这个文件处理刷新Token请求，生成新的访问Token和刷新Token。
+
+### `app/dashboard/page.tsx`
+
+这是一个服务端组件，用于显示用户的仪表板。
+
+### `app/login/page.tsx`
+
+这是一个服务端组件，通过表单提交到服务器来处理登录请求。
+
+### `app/layout.tsx`
+
+这是应用的根布局组件，包含全局样式和布局结构。
+
+### `app/page.tsx`
+
+这是应用的主页，包含导航链接。
+
+### `utils/apiClient.ts`
+
+这个文件提供了一个通用的API客户端，用于发送API请求，并处理不同类型的响应。
+
+### `utils/db.ts`
+
+这个文件模拟了一个简单的用户数据库和用户验证函数。
+
+## 使用方法
+
+1. 在浏览器中打开 `http://localhost:3000`。
+2. 点击 "Login" 链接跳转到登录页面。
+3. 输入电子邮件和密码，然后点击 "Login" 按钮。
+4. 登录成功后会跳转到仪表板页面，显示用户信息。
+5. 点击 "Logout" 按钮退出登录，跳转回登录页面。
+
+## 许可证
+
+此项目使用 MIT 许可证。有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
+
+```
+
+```
