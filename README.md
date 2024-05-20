@@ -64,45 +64,6 @@ Internationalization support - [Template with i18n](https://tailwind-nextjs-star
 - [Azurtelier.com](https://www.azurtelier.com/) - Amos's personal website for tech, music, AI illustrations, etc. [English/中文] ([Source code](https://github.com/AmosChenZixuan/Azurtelier.com))
 
 Using the template? Feel free to create a PR and add your blog to this list.
-
-## Examples V1
-
-[v1-blogs-showcase.webm](https://github.com/timlrx/tailwind-nextjs-starter-blog/assets/28362229/2124c81f-b99d-4431-839c-347e01a2616c)
-
-Thanks to the community of users and contributors to the template! We are no longer accepting new blog listings over here. If you have updated from version 1 to version 2, feel free to remove your blog from this list and add it to the one above.
-
-- [Aloisdg's cookbook](https://tambouille.vercel.app/) - with pictures and recipes!
-- [GautierArcin's demo with next translate](https://tailwind-nextjs-starter-blog-seven.vercel.app/) - includes translation of mdx posts, [source code](https://github.com/GautierArcin/tailwind-nextjs-starter-blog/tree/demo/next-translate)
-- [David Levai's digital garden](https://davidlevai.com/) - customized design and added email subscriptions
-- [Leo's Blog](https://leohuynh.dev) - Tuan Anh Huynh's personal site. Add Snippets Page, Author Profile Card, Image Lightbox, ...
-- [thvu.dev](https://thvu.dev) - Added `mdx-embed`, view count, reading minutes and more.
-- [irvin.dev](https://www.irvin.dev/) - Irvin Lin's personal site. Added YouTube embedding.
-- [KirillSo.com](https://www.kirillso.com/) - Personal blog & website.
-- [slightlysharpe.com](https://slightlysharpe.com) - [Tincre's](https://tincre.com) main company blog
-- [blog.b00st.com](https://blog.b00st.com) - [b00st.com's](https://b00st.com) main music promotion blog
-- [astrosaurus.me](https://astrosaurus.me/) - Ephraim Atta-Duncan's Personal Blog
-- [dhanrajsp.me](https://dhanrajsp.me/) - Dhanraj's personal site and blog.
-- [blog.r00ks.io](https://blog.r00ks.io/) - Austin Rooks's personal blog ([source code](https://github.com/Austionian/blog.r00ks)).
-- [honghong.me](https://honghong.me) - Tszhong's personal website ([source code](https://github.com/tszhong0411/home))
-- [marceloformentao.dev](https://marceloformentao.dev) - Marcelo Formentão personal website ([source code](https://github.com/marceloavf/marceloformentao.dev)).
-- [abiraja.com](https://www.abiraja.com/) - with a [runnable JS code snippet component!](https://www.abiraja.com/blog/querying-solana-blockchain)
-- [bpiggin.com](https://www.bpiggin.com) - Ben Piggin's personal blog
-- [maqib.cn](https://maqib.cn) - A blog of Chinese front-end developers 狂奔小马的博客 ([源码](https://github.com/maqi1520/nextjs-tailwind-blog))
-- [ambilena.com](https://ambilena.com/) - Electronic Music Blog & imprint for upcoming musicians.
-- [0xchai.io](https://0xchai.io) - Chai's personal blog
-- [techipedia](https://techipedia.vercel.app) - Simple blogging progressive web app with custom installation button and top progress bar
-- [reubence.com](https://reubence.com) - Reuben Rapose's Digital Garden
-- [axolo.co/blog](https://axolo.co/blog) - Engineering management news & axolo.co updates (with image preview for article in the home page)
-- [musing.vercel.app](https://musing.vercel.app/) - Parth Desai's personal blog ([source code](https://github.com/pycoder2000/blog))
-- [onyourmental.com](https://www.onyourmental.com/) - [Curtis Warcup's](https://github.com/Cwarcup) website for the On Your Mental Podcast ([source code](https://github.com/Cwarcup/on-your-mental))
-- [cwarcup.com](https://www.cwarcup.com/) - Curtis Warcup's personal website and blog ([source code](https://github.com/Cwarcup/personal-blog)).
-- [ondiek-elijah.me](https://www.ondiek-elijah.me/) - Ondiek Elijah's website and blog ([source code](https://github.com/Dev-Elie/ondiek-elijah)).
-- [jmalvarez.dev](https://www.jmalvarez.dev/) - José Miguel Álvarez's personal blog ([source code](https://github.com/josemiguel-alvarez/nextjs-blog))
-- [justingosses.com](https://justingosses.com/) - Justin Gosses's personal website and blog ([source code](https://github.com/JustinGOSSES/justingosses-website))
-- [https://bitoflearning-9a57.fly.dev/](https://bitoflearning-9a57.fly.dev/) - Sangeet Agarwal's personal blog, replatformed to [remix](https://remix.run/remix) using the [indie stack](https://github.com/remix-run/indie-stack) ([source code](https://github.com/SangeetAgarwal/bitoflearning))
-- [raphaelchelly.com](https://www.raphaelchelly.com/) - Raphaël Chelly's personal website and blog ([source code](https://github.com/raphaelchelly/raph_www))
-- [kaveh.page](https://kaveh.page) - Kaveh Tehrani's personal blog. Added tags directory, profile card, time-to-read on posts directory, etc.
-- [drakerossman.com](https://drakerossman.com/) - Drake Rossman's blog about NixOS, Rust, Software Architecture and Engineering Management, as well as general musings.
   
 ## Motivation
 
@@ -266,6 +227,86 @@ layout: PostLayout
 canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
 ---
 ```
+
+Sure, here’s a section you can add to your `README.md` to describe how to use the script to create a new post:
+
+
+### Creating a New Blog Post
+
+To create a new blog post, you can use the `newpost` script provided in the project. This script will prompt you for various details about the post, generate the appropriate frontmatter, create a Markdown file with a `.mdx` extension in a date-based directory, and open the file in your specified editor.
+
+#### Steps to Create a New Post
+
+1. **Open your terminal** and navigate to the root directory of the project.
+
+2. **Run the script**:
+   ```sh
+   npm run newpost
+   ```
+   By default, this will attempt to detect your current editor or open the file in Visual Studio Code. You can also specify your preferred editor as an argument:
+   ```sh
+   npm run newpost code   # Open with VSCode
+   npm run newpost subl   # Open with Sublime Text
+   npm run newpost zed    # Open with Zed
+   ```
+
+3. **Answer the prompts**:
+   - **Title**: Enter the title of your blog post.
+   - **Date**: Enter the date of the post (YYYY-MM-DD). The default is today's date.
+   - **Last Modified Date**: Enter the last modified date (YYYY-MM-DD). The default is today's date.
+   - **Tags**: Enter tags for the post, separated by commas.
+   - **Draft**: Indicate whether the post is a draft.
+   - **Summary**: Provide a brief summary of the post.
+   - **Images**: Enter paths to images, separated by commas.
+   - **Authors**: Enter the authors of the post, separated by commas. The default is `default`.
+   - **Layout**: Choose a layout from the provided options (`PostLayout`, `PostSimple`, `PostBanner`).
+   - **Canonical URL**: Enter a canonical URL for the post (optional).
+
+4. **Edit the new post file**:
+   - After answering the prompts, the script will create a new `.mdx` file in the `data/blog/<date>` directory (where `<date>` is the date you provided).
+   - The file will be opened in the specified editor. You can then add your content to the file.
+
+#### Example
+
+Here's an example of how the process looks:
+
+1. Run the script:
+   ```sh
+   yarn newpost
+   ```
+
+2. Answer the prompts in the terminal:
+   ```
+   ? Enter the post title: My Awesome Blog Post
+   ? Enter the post date (YYYY-MM-DD): (default: today) 2024-05-21
+   ? Enter the last modified date (YYYY-MM-DD): (default: today) 2024-05-21
+   ? Enter tags (comma-separated): tech, javascript, tutorial
+   ? Is this a draft? No
+   ? Enter a summary: This is a summary of my awesome blog post.
+   ? Enter image paths (comma-separated): /static/images/post1.jpg
+   ? Enter authors (comma-separated): (default: default) john, jane
+   ? Select a layout: PostLayout
+   ? Enter canonical URL (optional): 
+   ```
+
+3. The script creates and opens the new file `data/blog/2024-05-21/my-awesome-blog-post.mdx` with the following frontmatter:
+   ```markdown
+   ---
+   title: 'My Awesome Blog Post'
+   date: '2024-05-21'
+   lastmod: '2024-05-21'
+   draft: false
+   layout: PostLayout
+   tags: ['tech', 'javascript', 'tutorial']
+   summary: 'This is a summary of my awesome blog post.'
+   images: ['/static/images/post1.jpg']
+   authors: ['john', 'jane']
+   ---
+   ```
+
+4. Add your content to the `.mdx` file and save it.
+
+This process helps ensure that all necessary frontmatter is correctly formatted and that your new post is created in the appropriate directory structure.
 
 ## Deploy
 
