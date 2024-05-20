@@ -3,8 +3,13 @@ import path from 'path'
 import { spawn } from 'child_process'
 import inquirer from 'inquirer'
 import chalk from 'chalk'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 
-const postDirectory = path.join(process.cwd(), 'data', 'posts')
+// Handle paths relative to the script directory
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const postDirectory = path.join(__dirname, '../data/blog')
 
 const questions = [
   {
@@ -57,9 +62,10 @@ const questions = [
     default: 'default',
   },
   {
-    type: 'input',
+    type: 'list',
     name: 'layout',
-    message: 'Enter layout (default: PostLayout):',
+    message: 'Select a layout:',
+    choices: ['PostLayout', 'PostSimple', 'PostBanner'],
     default: 'PostLayout',
   },
   {
@@ -73,31 +79,37 @@ inquirer.prompt(questions).then((answers) => {
   const { title, date, lastmod, tags, draft, summary, images, authors, layout, canonicalUrl } =
     answers
 
-  const frontmatter = `---
-    title: '${title}'
-    date: '${date}'
-    lastmod: '${lastmod}'
-    tags: [${tags
-      .split(',')
-      .map((tag) => `'${tag.trim()}'`)
-      .join(', ')}]
-    draft: ${draft}
-    summary: '${summary}'
-    images: [${images
-      .split(',')
-      .map((image) => `'${image.trim()}'`)
-      .join(', ')}]
-    authors: [${authors
-      .split(',')
-      .map((author) => `'${author.trim()}'`)
-      .join(', ')}]
-    layout: ${layout}
-    ${canonicalUrl ? `canonicalUrl: ${canonicalUrl}` : ''}
-    ---
-    `
+  // Create a directory for the date if it doesn't exist
+  const dateDir = path.join(postDirectory, date)
+  if (!fs.existsSync(dateDir)) {
+    fs.mkdirSync(dateDir, { recursive: true })
+  }
 
-  const postFileName = `${date}-${title.toLowerCase().replace(/ /g, '-')}.mdx`
-  const postFilePath = path.join(postDirectory, postFileName)
+  const frontmatter = `---
+title: '${title}'
+date: '${date}'
+lastmod: '${lastmod}'
+tags: [${tags
+    .split(',')
+    .map((tag) => `'${tag.trim()}'`)
+    .join(', ')}]
+draft: ${draft}
+summary: '${summary}'
+images: [${images
+    .split(',')
+    .map((image) => `'${image.trim()}'`)
+    .join(', ')}]
+authors: [${authors
+    .split(',')
+    .map((author) => `'${author.trim()}'`)
+    .join(', ')}]
+layout: ${layout}
+${canonicalUrl ? `canonicalUrl: ${canonicalUrl}` : ''}
+---
+`
+
+  const postFileName = `${title.toLowerCase().replace(/ /g, '-')}.mdx`
+  const postFilePath = path.join(dateDir, postFileName)
 
   fs.writeFileSync(postFilePath, frontmatter)
 
