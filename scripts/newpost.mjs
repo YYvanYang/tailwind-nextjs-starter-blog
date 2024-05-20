@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import inquirer from 'inquirer'
 import chalk from 'chalk'
+import open from 'open'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
@@ -75,6 +75,23 @@ const questions = [
   },
 ]
 
+const args = process.argv.slice(2)
+let editorCommand = args[0] || ''
+
+// If no command-line argument is provided, try to detect the editor
+if (!editorCommand) {
+  if (process.env.VSCODE_PID) {
+    editorCommand = 'code'
+  } else if (process.env.SUBLIME_TEXT_PID) {
+    editorCommand = 'subl'
+  } else if (process.env.ZED_PID) {
+    editorCommand = 'zed'
+  } else {
+    // Default to VSCode if no environment variable is found
+    editorCommand = 'code'
+  }
+}
+
 inquirer.prompt(questions).then((answers) => {
   const { title, date, lastmod, tags, draft, summary, images, authors, layout, canonicalUrl } =
     answers
@@ -85,43 +102,52 @@ inquirer.prompt(questions).then((answers) => {
     fs.mkdirSync(dateDir, { recursive: true })
   }
 
-  const frontmatter = `---
+  // Sanitize the title to create a valid filename
+  const sanitizedTitle = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  const postFileName = `${date}-${sanitizedTitle}.mdx`
+  const postFilePath = path.join(dateDir, postFileName)
+
+  // Generate the frontmatter
+  let frontmatter = `---
 title: '${title}'
 date: '${date}'
 lastmod: '${lastmod}'
-tags: [${tags
-    .split(',')
-    .map((tag) => `'${tag.trim()}'`)
-    .join(', ')}]
 draft: ${draft}
-summary: '${summary}'
-images: [${images
-    .split(',')
-    .map((image) => `'${image.trim()}'`)
-    .join(', ')}]
-authors: [${authors
-    .split(',')
-    .map((author) => `'${author.trim()}'`)
-    .join(', ')}]
 layout: ${layout}
-${canonicalUrl ? `canonicalUrl: ${canonicalUrl}` : ''}
----
 `
 
-  const postFileName = `${title.toLowerCase().replace(/ /g, '-')}.mdx`
-  const postFilePath = path.join(dateDir, postFileName)
+  if (tags)
+    frontmatter += `tags: [${tags
+      .split(',')
+      .map((tag) => `'${tag.trim()}'`)
+      .join(', ')}]\n`
+  if (summary) frontmatter += `summary: '${summary}'\n`
+  if (images)
+    frontmatter += `images: [${images
+      .split(',')
+      .map((image) => `'${image.trim()}'`)
+      .join(', ')}]\n`
+  if (authors)
+    frontmatter += `authors: [${authors
+      .split(',')
+      .map((author) => `'${author.trim()}'`)
+      .join(', ')}]\n`
+  if (canonicalUrl) frontmatter += `canonicalUrl: ${canonicalUrl}\n`
 
+  frontmatter += `---
+`
+
+  // Write the post file
   fs.writeFileSync(postFilePath, frontmatter)
 
   console.log(chalk.green('Create Post Succeed.'))
   console.log(chalk.blue(`Open the file ${postFilePath} to write your blog now.`))
 
-  // Open the created file using appropriate command based on the platform
-  if (process.platform === 'win32') {
-    spawn('cmd', ['/c', 'start', postFilePath])
-  } else if (process.platform === 'darwin') {
-    spawn('open', [postFilePath])
-  } else if (['linux', 'freebsd'].includes(process.platform)) {
-    spawn('xdg-open', [postFilePath])
-  }
+  // Open the created file using the determined editor
+  open(postFilePath, { app: { name: editorCommand } }).catch((err) => {
+    console.error(chalk.red(`Failed to open the file: ${err.message}`))
+  })
 })
