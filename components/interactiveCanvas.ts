@@ -179,7 +179,23 @@ function resizeCanvas(): void {
   }
 }
 
-export function startRendering(): void {
+function cleanup(): void {
+  document.removeEventListener('mousemove', handleEvent)
+  document.removeEventListener('touchstart', handleEvent)
+  document.removeEventListener('touchmove', handleEvent)
+  window.removeEventListener('resize', resizeCanvas)
+  document.body.removeEventListener('orientationchange', resizeCanvas)
+  window.removeEventListener('focus', render)
+  window.removeEventListener('blur', render)
+
+  if (app.ctx) {
+    app.ctx.running = false
+    app.ctx = null
+  }
+  app.lines = []
+}
+
+export function startRendering(): () => void {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement
   app.ctx = canvas.getContext('2d')
   if (app.ctx) {
@@ -195,4 +211,6 @@ export function startRendering(): void {
     resizeCanvas()
     render()
   }
+
+  return cleanup
 }

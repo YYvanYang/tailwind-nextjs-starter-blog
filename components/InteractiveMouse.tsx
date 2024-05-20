@@ -3,9 +3,10 @@
 import { useEffect } from 'react'
 import { startRendering } from './interactiveCanvas'
 
-export default function MouseLine() {
+export default function InteractiveMouse() {
   useEffect(() => {
-    startRendering()
+    const cleanup = startRendering()
+    return cleanup
   }, [])
   return (
     <canvas className="bg-skin-base pointer-events-none fixed inset-0 -z-10" id="canvas"></canvas>
