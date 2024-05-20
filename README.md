@@ -177,6 +177,11 @@ Please note, that if you are using Windows, you may need to run:
 set PWD="$(pwd)"
 ```
 
+```powershell
+$PWD = Get-Location
+[System.Environment]::SetEnvironmentVariable('PWD', $PWD, [System.EnvironmentVariableTarget]::Process)
+```
+
 ## Development
 
 First, run the development server:
