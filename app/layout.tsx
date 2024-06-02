@@ -11,6 +11,7 @@ import Footer from '@/components/Footer'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
+import GoogleAdsense from '@/components/GoogleAdsense'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </SectionContainer>
         </ThemeProviders>
       </body>
+      <GoogleAdsense pId={process.env.NEXT_PUBLIC_ADSENSE_ID as string} />
     </html>
   )
 }
